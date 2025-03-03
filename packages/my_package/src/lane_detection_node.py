@@ -9,17 +9,25 @@ import cv2
 from cv_bridge import CvBridge
 import numpy as np
 
-class LaneDetectionNode(DTROS):
+class LaneDetectionNode():
     def __init__(self, node_name):
-        super(LaneDetectionNode, self).__init__(node_name=node_name, node_type=NodeType.VISUALIZATION)
+        # super(LaneDetectionNode, self).__init__(node_name=node_name, node_type=NodeType.VISUALIZATION)
         
         self._vehicle_name = os.environ['VEHICLE_NAME']
         self._camera_topic = f"/{self._vehicle_name}/camera_node/image/compressed"
         
         self._bridge = CvBridge()
         
-        self.sub = rospy.Subscriber(self._camera_topic, CompressedImage, self.callback)
+        self.sub = rospy.Subscriber(self._camera_topic, CompressedImage, self.callbacktest)
         self.pub = rospy.Publisher(f"/{self._vehicle_name}/lane_detection/image/compressed", CompressedImage, queue_size=10)
+        self.width_in_meters = 0
+        self.height_in_meters = 0
+
+    def callbacktest(self, msg):
+        image = self._bridge.compressed_imgmsg_to_cv2(msg)
+        processed_image = self.detect_lane(image)
+        output_msg = self._bridge.cv2_to_compressed_imgmsg(processed_image)
+        self.pub.publish(output_msg)
         
     def callback(self, msg):
         image = self._bridge.compressed_imgmsg_to_cv2(msg)
@@ -85,16 +93,16 @@ class LaneDetectionNode(DTROS):
             Z_max = (focal_length ) / (max_y - cy)  # Depth for max_y
 
             # Calculate real-world width and height of the lane
-            width_in_meters = (max_x - min_x) * Z_max / focal_length  # Using depth for the near lane line
-            height_in_meters = (max_y - min_y) * Z_max / focal_length  # Using depth for the near lane line
+            self.width_in_meters = (max_x - min_x) * Z_max / focal_length  # Using depth for the near lane line
+            self.height_in_meters = (max_y - min_y) * Z_max / focal_length  # Using depth for the near lane line
 
             # Draw rectangle around the lane (in pixels)
             cv2.rectangle(image, (min_x, min_y), (max_x, max_y), (0, 255, 0), 3)
-            cv2.putText(image, f"Width: {width_in_meters:.2f} m", (min_x, min_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            cv2.putText(image, f"Height: {height_in_meters:.2f} m", (min_x, min_y - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.putText(image, f"Width: {self.width_in_meters:.2f} m", (min_x, min_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.putText(image, f"Height: {self.height_in_meters:.2f} m", (min_x, min_y - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
         return image
 
-if __name__ == '__main__':
-    node = LaneDetectionNode(node_name='lane_detection_node')
-    rospy.spin()
+# if __name__ == '__main__':
+#     node = LaneDetectionNode(node_name='lane_detection_node')
+#     rospy.spin()
