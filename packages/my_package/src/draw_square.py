@@ -19,9 +19,12 @@ class DrawSquareNode(DShapeNode):
         self.led_pub = rospy.Publisher(f"/{self.vehicle_name}/led_emitter_node/led_pattern", LEDPattern, queue_size=1)
         self.sub_left_enc = rospy.Subscriber(f"/{self.vehicle_name}/left_wheel_encoder_node/tick", WheelEncoderStamped, self.cb_left_encoder)
         self.sub_right_enc = rospy.Subscriber(f"/{self.vehicle_name}/right_wheel_encoder_node/tick", WheelEncoderStamped, self.cb_right_encoder)
+
+        ## Lane Detection Node
+        # important !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.LDNode = LaneDetectionNode(node_name='lane_detection_node')
 
-        # data to be tuned
+        # data to be tuned #################################################
         self.TICKS_PER_REV = 135
         self.WHEEL_RADIUS = 0.0318
         self.WHEEL_CIRC = 2.0 * math.pi * self.WHEEL_RADIUS
@@ -36,7 +39,10 @@ class DrawSquareNode(DShapeNode):
         self._right_distance_traveled = 0.0
         self.TICKS_PER_REV = 135
         self.WHEEL_RADIUS = 0.0318
+    ######################################################################
 
+
+    ## chage this part to change the shape ################################
     def run(self):
         for _ in range(4):
             self.lane_detection()
@@ -45,7 +51,8 @@ class DrawSquareNode(DShapeNode):
             self.rotate_to_angle(self.ROTATE_90_RAD, direction=-1)
             rospy.sleep(1)
 
-
+    #######################################################################
+    # print out the hight of the lane
     def lane_detection(self):
         rospy.loginfo(f"height:{self.LDNode.height_in_meters}")
 
