@@ -9,7 +9,7 @@ from std_msgs.msg import Float64 as Float
 from duckietown_msgs.msg import Twist2DStamped, WheelEncoderStamped, LEDPattern
 from sensor_msgs.msg import CompressedImage
 from D_shape_node import DShapeNode
-from lane_detection_node import LaneDetectionNode
+from detect import GreenLineLaneDetectionNode, BlueLineDetectionNodeS
 
 class DrawSquareNode(DShapeNode):
     
@@ -22,7 +22,7 @@ class DrawSquareNode(DShapeNode):
 
         ## Lane Detection Node
         # important !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        self.LDNode = LaneDetectionNode(node_name='lane_detection_node')
+        self.LDNode = GreenLineLaneDetectionNode(node_name='lane_detection_node')
 
         # data to be tuned #################################################
         self.TICKS_PER_REV = 135
@@ -44,12 +44,12 @@ class DrawSquareNode(DShapeNode):
 
     ## chage this part to change the shape ################################
     def run(self):
-        for _ in range(4):
-            self.lane_detection()
-            self.straight_line(distance=1)
-            rospy.sleep(1)
-            self.rotate_to_angle(self.ROTATE_90_RAD, direction=-1)
-            rospy.sleep(1)
+        # for _ in range(4):
+        #     self.lane_detection()
+        #     self.straight_line(distance=1)
+        #     rospy.sleep(1)
+        #     self.rotate_to_angle(self.ROTATE_90_RAD, direction=-1)
+        #     rospy.sleep(1)
 
     #######################################################################
     # print out the hight of the lane
