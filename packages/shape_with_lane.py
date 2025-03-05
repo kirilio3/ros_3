@@ -384,6 +384,7 @@ class DShapeNode(DTROS):
         # self.straight_line(1.3)
         rospy.sleep(2.0)
         self.move_arc_quarter_odometry(0.2, 1.3, False)
+        self.move_arc_quarter_odometry(0.2, 1.3, True)
         # self.turn_90_degrees()
         # rospy.sleep(2.0)
         # if self.lane_length is not None:
