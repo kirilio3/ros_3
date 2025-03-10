@@ -4,217 +4,170 @@ import os
 import math
 import rospy
 from duckietown.dtros import DTROS, NodeType
-from std_msgs.msg import ColorRGBA
-from std_msgs.msg import Float64 as Float
-from duckietown_msgs.msg import Twist2DStamped, WheelEncoderStamped, LEDPattern
-from sensor_msgs.msg import CompressedImage
-from D_shape_node import DShapeNode
-from detect import GreenLineLaneDetectionNode, BlueLineDetectionNodeS
+from sensor_msgs.msg import CompressedImage, CameraInfo
+
 import cv2
-from cv_bridge import CvBridge
 import numpy as np
-import time
+from cv_bridge import CvBridge
 
+class CameraReaderNode(DTROS):
 
-
-"""
-to start the gui tool use: dts start_gui_tools csc22911
-and after the bot is running use: rqt_image_view
-
-"""
-
-class DrawSquareNode(DShapeNode):
-    
     def __init__(self, node_name):
-        super(DrawSquareNode, self).__init__(node_name=node_name)
-        self.pub_cmd = rospy.Publisher(f"/{self.vehicle_name}/car_cmd_switch_node/cmd", Twist2DStamped, queue_size=1)
-        self.led_pub = rospy.Publisher(f"/{self.vehicle_name}/led_emitter_node/led_pattern", LEDPattern, queue_size=1)
-        self.sub_left_enc = rospy.Subscriber(f"/{self.vehicle_name}/left_wheel_encoder_node/tick", WheelEncoderStamped, self.cb_left_encoder)
-        self.sub_right_enc = rospy.Subscriber(f"/{self.vehicle_name}/right_wheel_encoder_node/tick", WheelEncoderStamped, self.cb_right_encoder)
-
-
-
-        # data to be tuned #################################################
-        self.TICKS_PER_REV = 135
-        self.WHEEL_RADIUS = 0.0318
-        self.WHEEL_CIRC = 2.0 * math.pi * self.WHEEL_RADIUS
-        self.BASELINE = 0.1016
-        self.ROTATE_90_RAD = math.pi / 2
-        self.TOL_ANGLE = 0
-        self.TOL = 0.08
-        self.OMEGA_SPEED = 10
-        self.VELOCITY = 0.4
-        self.small_tune = 0
-        self._left_distance_traveled = 0.0
-        self._right_distance_traveled = 0.0
-        self.TICKS_PER_REV = 135
-        self.WHEEL_RADIUS = 0.0318
-    ######################################################################
+        # Initialize the DTROS parent class
+        super(CameraReaderNode, self).__init__(node_name=node_name, node_type=NodeType.VISUALIZATION)
+        
+        # Static parameters
         self._vehicle_name = os.environ['VEHICLE_NAME']
-        
         self._camera_topic = f"/{self._vehicle_name}/camera_node/image/compressed"
-        
+        self._camera_info_topic = f"/{self._vehicle_name}/camera_node/camera_info"
+        self._undistorted_topic = f"/{self._vehicle_name}/camera_node/image/distorted_image/compressed"
+
+        # Bridge between OpenCV and ROS
         self._bridge = CvBridge()
-        
+
+        # Variables to store camera matrix and distortion coefficients
+        self._camera_matrix = None
+        self._distortion_coeffs = None
+
+        # HSV range for yellow (tune these values based on your environment)
+        self._yellow_lower = np.array([20, 100, 100], np.uint8)
+        self._yellow_upper = np.array([30, 255, 255], np.uint8)
+
+        # HSV range for white (tune these values based on your environment)
+        self._white_lower = np.array([0, 0, 200], np.uint8)
+        self._white_upper = np.array([180, 30, 255], np.uint8)
+
+        # Kernel for morphological operations
+        # self._kernel = np.ones((5, 5), "uint8")
+
+        # Camera height above the lane (in meters) - adjust this based on your setup
+        self._camera_height = 0.1  
+
+        # Subscribers
+        self.camera_info_sub = rospy.Subscriber(self._camera_info_topic, CameraInfo, self.camera_info_callback)
         self.sub = rospy.Subscriber(self._camera_topic, CompressedImage, self.callback)
-        self.pub = rospy.Publisher(f"/{self._vehicle_name}/green_line_lane_detection/image/compressed", CompressedImage, queue_size=10)
+
+        # Publisher for the processed image
+        self.image_pub = rospy.Publisher(self._undistorted_topic, CompressedImage, queue_size=10)
+
+    def camera_info_callback(self, msg):
+        # Extract camera matrix (K) and distortion coefficients (D)
+        self._camera_matrix = np.array(msg.K).reshape(3, 3)
+        self._distortion_coeffs = np.array(msg.D)
+        # rospy.loginfo("Received camera info")
+
+    def detect_lines_and_lane_width(self, image):
         
-        self.distances = []
-        self.start_time = time.time()
-    ######################################################################
+        if self._camera_matrix is None:
+            rospy.logwarn("Camera matrix not available yet, cannot compute real-world width.")
+            return image, None
 
+        # Focal length in pixels (fx from camera matrix)
+        focal_length = self._camera_matrix[0, 0]
+        
+        # Convert to HSV color space
+        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
+        # Create masks for yellow and white
+        yellow_mask = cv2.inRange(hsv_image, self._yellow_lower, self._yellow_upper)
+        # yellow_mask = cv2.dilate(yellow_mask, self._kernel)
+
+        white_mask = cv2.inRange(hsv_image, self._white_lower, self._white_upper)
+        # white_mask = cv2.dilate(white_mask, self._kernel)
+
+        # Find contours for yellow
+        yellow_contours, _ = cv2.findContours(yellow_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        yellow_inner_x = None
+        yellow_y = None  # To approximate vertical position
+        for contour in yellow_contours:
+            area = cv2.contourArea(contour)
+            if area > 300:
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 255), 2)
+                cv2.putText(image, "Yellow Line", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+                # Inner edge of yellow line is the rightmost point (x + w)
+                if yellow_inner_x is None or (x + w) > yellow_inner_x:
+                    yellow_inner_x = x + w
+                    yellow_y = y + h // 2  # Approximate vertical center of the contour
+
+        # Find contours for white
+        white_contours, _ = cv2.findContours(white_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        white_inner_x = None
+        white_y = None  # To approximate vertical position
+        for contour in white_contours:
+            area = cv2.contourArea(contour)
+            if area > 300:
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(image, (x, y), (x + w, y + h), (255, 255, 255), 2)
+                cv2.putText(image, "White Line", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+                # Inner edge of white line is the leftmost point (x)
+                if white_inner_x is None or x < white_inner_x:
+                    white_inner_x = x
+                    white_y = y + h // 2
+
+        # Calculate lane width in meters if both lines are detected
+        lane_width_meters = None
+        lane_center_x = None
+        if yellow_inner_x is not None and white_inner_x is not None:
+            # Pixel distance between inner edges
+            pixel_width = abs(white_inner_x - yellow_inner_x)
+            # Convert to meters: (pixel_width * real-world distance) / focal_length
+            lane_width_meters = (pixel_width) / focal_length
+            # Display lane width on the image
+            # Calculate lane center (midpoint between inner edges)
+            lane_center_x = (yellow_inner_x + white_inner_x) // 2
+            # Approximate vertical center (average of yellow and white y-positions)
+            lane_center_y = (yellow_y + white_y) // 2
+
+            # Display lane width on the image
+            width_text = f"Lane Width: {lane_width_meters:.2f} m"
+            width_text_size = cv2.getTextSize(width_text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
+            width_text_x = (image.shape[1] - width_text_size[0]) // 2
+            width_text_y = image.shape[0] - 20
+            cv2.putText(image, width_text, (width_text_x, width_text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+            # Mark the lane center with a circle and label
+            cv2.circle(image, (lane_center_x, lane_center_y), 5, (0, 0, 255), -1)  # Red dot
+            cv2.putText(image, "Lane Center", (lane_center_x + 10, lane_center_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+        return image, lane_width_meters, lane_center_x
+        #     text = f"Lane Width: {lane_width_meters:.2f} m"
+        #     text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)[0]
+        #     text_x = (image.shape[1] - text_size[0]) // 2
+        #     text_y = image.shape[0] - 20  # Near the bottom
+        #     cv2.putText(image, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+
+        # return image, lane_width_meters
 
     def callback(self, msg):
+        if self._camera_matrix is None or self._distortion_coeffs is None:
+            rospy.logwarn("Waiting for camera calibration parameters...")
+            return
+        
+        # Convert JPEG bytes to CV image
         image = self._bridge.compressed_imgmsg_to_cv2(msg)
         
-        processed_image, green_distance = self.detect_green_line(image)
-        processed_image, lane_length, lane_width = self.detect_lane(processed_image)
-        
-        output_msg = self._bridge.cv2_to_compressed_imgmsg(processed_image)
-        self.pub.publish(output_msg)
-        rospy.loginfo(f"distance:{green_distance}")
-        if green_distance:
-            self.distances.append(green_distance)
-        
-        if time.time() - self.start_time >= 5:
-            self.start_time = time.time()
-            self.distances.clear()
+        # Undistort the image
+        undistorted_image = cv2.undistort(image, self._camera_matrix, self._distortion_coeffs)
 
+        # Detect lines and calculate lane width in meters
+        processed_image, lane_width_meters, lane_center_x = self.detect_lines_and_lane_width(undistorted_image)
 
+        # Log the results (optional)
+        # if lane_width_meters is not None and lane_center_x is not None:
+        #     rospy.loginfo(f"Lane width: {lane_width_meters:.2f} meters, Lane center x: {lane_center_x} pixels")
 
+        # # Log the lane width (optional)
+        # if lane_width_meters is not None:
+        #     rospy.loginfo(f"Lane width: {lane_width_meters:.2f} meters")
 
-    def average_distance_getter(self):
-        if self.distances:
-            return sum(self.distances)/len(self.distances)
-    
-    def detect_green_line(self, image):
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        
-        # Define green color range
-        lower_green = np.array([35, 100, 50], np.uint8)
-        upper_green = np.array([85, 255, 255], np.uint8)
-        green_mask = cv2.inRange(hsv, lower_green, upper_green)
-        
-        kernel = np.ones((5, 5), np.uint8)
-        green_mask = cv2.dilate(green_mask, kernel, iterations=2)
-
-        edges = cv2.Canny(green_mask, 50, 150)
-        
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        if contours:
-            largest_contour = max(contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(largest_contour)
-            
-            # Check if the green line's bounding box is within the field of view
-            height, width, _ = image.shape
-            if y + h < height and x + w < width and x > 0 and y > 0:
-                # Calculate distance only if the line is visible
-                focal_length = 50  # Approximate focal length
-                real_height_meters = 0.1  # Estimated real-world height of the green line (adjust if necessary)
-                pixel_height = h
-                
-                if pixel_height > 0:
-                    distance = (real_height_meters * focal_length) / pixel_height
-                    
-                    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
-                    cv2.putText(image, f"Green Line Distance: {distance:.2f} m", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                    
-                    return image, distance
-        
-            else:
-                # If the line is out of view, assume it's reached
-                cv2.putText(image, "Line reached", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-                return image, None
-        
-        # If no green line is detected
-        return image, None
-    
-    def detect_lane(self, image):
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        
-        lower_yellow = np.array([20, 100, 100], np.uint8)
-        upper_yellow = np.array([30, 255, 255], np.uint8)
-        yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-
-        lower_white = np.array([0, 0, 200], np.uint8)
-        upper_white = np.array([180, 50, 255], np.uint8)
-        white_mask = cv2.inRange(hsv, lower_white, upper_white)
-
-        combined_mask = cv2.bitwise_or(yellow_mask, white_mask)
-        edges = cv2.Canny(combined_mask, 50, 150)
-        
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=30, maxLineGap=10)
-
-        left_x, right_x, top_y, bottom_y = [], [], [], []
-        
-        if lines is not None:
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                if x1 < image.shape[1] // 2 and x2 < image.shape[1] // 2:
-                    left_x.extend([x1, x2])
-                elif x1 > image.shape[1] // 2 and x2 > image.shape[1] // 2:
-                    right_x.extend([x1, x2])
-                top_y.extend([y1, y2])
-                bottom_y.extend([y1, y2])
-        
-        if left_x and right_x and top_y and bottom_y:
-            min_x, max_x = max(left_x), min(right_x)
-            min_y, max_y = min(top_y), max(bottom_y)
-
-            focal_length = 50
-            cx, cy = image.shape[1] // 2, image.shape[0] // 2
-            
-            # Calculate distance based on the detected lane width and lane length
-            # Z_min = focal_length / (cy)
-            Z_max = focal_length / (cy)
-            # Z_max = focal_length / (max_y - cy)
-            
-            dx_pixels, dy_pixels = max_x - min_x, max_y - min_y
-            pixel_distance = math.sqrt(dx_pixels**2 + dy_pixels**2)
-
-            lane_length_meters = (dy_pixels * Z_max / focal_length) - 0.2
-            # lane_length_meters = pixel_distance * Z_max / focal_length
-            lane_width_meters = dx_pixels * Z_max / focal_length
-            
-            cv2.rectangle(image, (min_x, min_y), (max_x, max_y), (0, 255, 255), 3)
-            cv2.putText(image, f"Lane Length: {lane_length_meters:.2f} m", (min_x, min_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-            cv2.putText(image, f"Lane Width: {lane_width_meters:.2f} m", (min_x, min_y - 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-            
-            return image, lane_length_meters, lane_width_meters
-        
-        return image, None, None
-    ######################################################################
-
-    
-    def stop_for_x_sec(self, x):
-        n = 0
-        start_time = rospy.Time.now()
-        rate = rospy.Rate(100)  # 10 Hz
-        while (rospy.Time.now() - start_time).to_sec() < x:
-            n+=0.1
-            self.pub_cmd.publish(Twist2DStamped())
-            rate.sleep()
-            rospy.loginfo(f"thread1:{n}")
-
-    ## chage this part to change the shape ################################
-    def run(self):
-        rospy.sleep(1)
-        self.stop_for_x_sec(5)
-        distance = self.average_distance_getter()
-        rospy.loginfo(f"distance:{distance}")
-        self.straight_line(distance=1)
-
-
-
-    #######################################################################
-    # print out the hight of the lane
+        # Convert back to ROS message and publish
+        undistorted_msg = self._bridge.cv2_to_compressed_imgmsg(processed_image)
+        self.image_pub.publish(undistorted_msg)
 
 if __name__ == '__main__':
-    # create the node
-    node = DrawSquareNode(node_name='draw_square_node')
-    # run node
-    node.run()
-    # keep spinning
+    # Create the node
+    node = CameraReaderNode(node_name='camera_reader_node')
+    # Keep spinning
     rospy.spin()
+
