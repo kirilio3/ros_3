@@ -17,7 +17,7 @@ and after the bot is running use: rqt_image_view
 """
 class GreenLineLaneDetectionNode():
     def __init__(self, node_name):
-        super(GreenLineLaneDetectionNode, self).__init__(node_name=node_name, node_type=NodeType.VISUALIZATION)
+        # super(GreenLineLaneDetectionNode, self).__init__(node_name=node_name, node_type=NodeType.VISUALIZATION)
         
         self._vehicle_name = os.environ['VEHICLE_NAME']
         
@@ -40,12 +40,16 @@ class GreenLineLaneDetectionNode():
         output_msg = self._bridge.cv2_to_compressed_imgmsg(processed_image)
         self.pub.publish(output_msg)
         
-        if green_distance:
+        if green_distance and green_distance > 20:
             self.distances.append(green_distance)
         
         if time.time() - self.start_time >= 5:
             self.start_time = time.time()
             self.distances.clear()
+    
+    def average_distance_getter(self):
+        if self.distances:
+            return sum(self.distances)/len(self.distances)
     
     def detect_green_line(self, image):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
