@@ -100,3 +100,6 @@ class LaneDetectionNode(DTROS):
 if __name__ == '__main__':
     node = LaneDetectionNode(node_name='lane_detection_node')
     rospy.spin()
+
+
+
