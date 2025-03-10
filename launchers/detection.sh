@@ -6,6 +6,6 @@ source /environment.sh
 dt-launchfile-init
 
 # launch subscriber
-rosrun my_package detect.py
+rosrun my_package lane_detection_node.py
 # wait for app to end
 dt-launchfile-join
