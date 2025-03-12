@@ -61,12 +61,13 @@ class DShapeNode(DTROS):
         self.WHEEL_CIRC = 2.0 * math.pi * self.WHEEL_RADIUS
         self.BASELINE = 0.077
         self.VELOCITY = 0.3
-        self.OMEGA_SPEED = 10
+        self.OMEGA_SPEED = 5
         self.angular_vel = 2.6
+        self.bias = 1
         
         # Control parameters
-        self.KP = 0.0075  # Proportional gain for lane following
-        self.TARGET_DISTANCE = 1.3  # meters
+        self.KP = 0.035  # Proportional gain for lane following
+        self.TARGET_DISTANCE = 10  # meters
     
         signal.signal(signal.SIGINT, self.signal_handler)
 
@@ -172,8 +173,14 @@ class DShapeNode(DTROS):
                 break
                 
             # Get latest lane positions (these will be updated by cb_camera)
-            yellow_msg = rospy.wait_for_message(f"/{self.vehicle_name}/yellow_lane", Float64, timeout=1.0)
-            white_msg = rospy.wait_for_message(f"/{self.vehicle_name}/white_lane", Float64, timeout=1.0)
+            try:
+                yellow_msg = rospy.wait_for_message(f"/{self.vehicle_name}/yellow_lane", Float64, timeout=1.0)
+                white_msg = rospy.wait_for_message(f"/{self.vehicle_name}/white_lane", Float64, timeout=1.0)
+            except rospy.ROSException as e:
+                rospy.logwarn(f"Failed to get lane messages: {e}")
+                yellow_msg = None
+                white_msg = None
+            
             
             if yellow_msg is not None and white_msg is not None:
                 lane_center = (yellow_msg.data + white_msg.data) / 2
@@ -181,17 +188,24 @@ class DShapeNode(DTROS):
                 
                 # Calculate error and control signal
                 error = image_center - lane_center
+                rospy.loginfo(f"Error: {error}")
                 omega = self.KP * error  # Proportional control
-                
-                # Bound the angular velocity
-                omega = max(min(omega, self.OMEGA_SPEED), -self.OMEGA_SPEED)
-                
-                # Publish control command
-                cmd = Twist2DStamped(v=self.VELOCITY, omega=omega)
-                self.pub_cmd.publish(cmd)
+                if abs(error) > 45 and abs(error) < 65:
+                    omega = max(min(omega, self.OMEGA_SPEED), -self.OMEGA_SPEED)
+                    
+                    # Publish control command
+                    cmd = Twist2DStamped(v=self.VELOCITY/2, omega=omega+self.bias)
+                    self.pub_cmd.publish(cmd)
+                else:
+                    # Bound the angular velocity
+                    omega = max(min(omega, self.OMEGA_SPEED), -self.OMEGA_SPEED)
+                    
+                    # Publish control command
+                    cmd = Twist2DStamped(v=self.VELOCITY, omega=omega)
+                    self.pub_cmd.publish(cmd)
             else:
                 # If lanes not detected, go straight slowly
-                cmd = Twist2DStamped(v=self.VELOCITY/2, omega=0.0)
+                cmd = Twist2DStamped(v=self.VELOCITY/2, omega=self.OMEGA_SPEED*2)
                 self.pub_cmd.publish(cmd)
                 
             rate.sleep()
