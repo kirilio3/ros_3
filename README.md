@@ -168,14 +168,33 @@ Overall, the assignment provided valuable hands-on experience with ROS, computer
 
 
 # HOW TO RUN THE CODE
-- first build the code by using following line:
--   build: dts devel build -f
+# Building and Running the Code
+
+Follow the steps below to build and run the code:
+
 ---
-- next run: dts devel run -R csc22911 -L < the_rogram_you_try_to_run >
-  ex: dts devel run -R csc22911 -L col-det
-  this line will run the Color_Detection.py
-- each python file match to a sh file. plz use the following table to find the corresponding sh files.
-- 
+
+## 1. Build the Code
+
+First, build the code using the following command:
+
+```bash
+dts devel build -f
+
+## 2. Run the Code
+Next, run the desired program with:
+
+```bash
+dts devel run -R csc22911 -L <the_program_you_want_to_run>
+
+For example, to run Color_Detection.py, execute:
+
+```bash
+Copy code
+dts devel run -R csc22911 -L col-det
+
+This command will run the Color_Detection.py file.
+  
 | Python File             | SH File               |
 |-------------------------|-----------------------|
 | Color_Detection.py      | col-det.sh            |
