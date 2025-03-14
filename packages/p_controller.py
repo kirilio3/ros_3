@@ -61,12 +61,13 @@ class DShapeNode(DTROS):
         self.WHEEL_CIRC = 2.0 * math.pi * self.WHEEL_RADIUS
         self.BASELINE = 0.077
         self.VELOCITY = 0.3
-        self.OMEGA_SPEED = 10
+        self.OMEGA_SPEED = 2.5
         self.angular_vel = 2.6
+        self.bias = 1
         
         # Control parameters
-        self.KP = 0.0075  # Proportional gain for lane following
-        self.TARGET_DISTANCE = 1.3  # meters
+        self.KP = 0.035  # Proportional gain for lane following
+        self.TARGET_DISTANCE = 10  # meters
     
         signal.signal(signal.SIGINT, self.signal_handler)
 
@@ -109,6 +110,7 @@ class DShapeNode(DTROS):
             if cv2.contourArea(contour) > 300:
                 x, y, w, h = cv2.boundingRect(contour)
                 white_pos = x + w/2  # Center of white lane
+        
                 
         return yellow_pos, white_pos
 
@@ -163,7 +165,7 @@ class DShapeNode(DTROS):
         rospy.loginfo("Starting lane following for 1.5 meters...")
         self.set_led_color('CYAN')
         
-        rate = rospy.Rate(10)
+        rate = rospy.Rate(100)
         while not rospy.is_shutdown():
             avg_distance = (self._left_distance_traveled + self._right_distance_traveled) / 2
             
@@ -172,26 +174,45 @@ class DShapeNode(DTROS):
                 break
                 
             # Get latest lane positions (these will be updated by cb_camera)
-            yellow_msg = rospy.wait_for_message(f"/{self.vehicle_name}/yellow_lane", Float64, timeout=1.0)
-            white_msg = rospy.wait_for_message(f"/{self.vehicle_name}/white_lane", Float64, timeout=1.0)
+            try:
+                yellow_msg = rospy.wait_for_message(f"/{self.vehicle_name}/yellow_lane", Float64, timeout=1.0)
+                white_msg = rospy.wait_for_message(f"/{self.vehicle_name}/white_lane", Float64, timeout=1.0)
+            except rospy.ROSException as e:
+                rospy.logwarn(f"Failed to get lane messages: {e}")
+                yellow_msg = None
+                white_msg = None
+            
             
             if yellow_msg is not None and white_msg is not None:
-                lane_center = (yellow_msg.data + white_msg.data) / 2
                 image_center = 320  # Assuming 640x480 image
-                
-                # Calculate error and control signal
+                lane_center = (yellow_msg.data + white_msg.data) / 2
+                # Calculate error and control signal    
                 error = image_center - lane_center
+                rospy.loginfo(f"Error: {error}")
                 omega = self.KP * error  # Proportional control
-                
-                # Bound the angular velocity
-                omega = max(min(omega, self.OMEGA_SPEED), -self.OMEGA_SPEED)
-                
-                # Publish control command
-                cmd = Twist2DStamped(v=self.VELOCITY, omega=omega)
-                self.pub_cmd.publish(cmd)
+                if abs(error) > 42.5 :
+                    whiteLine = white_msg.data
+                    lane_center = (yellow_msg.data + whiteLine) / 2
+                    # Calculate error and control signal    
+                    error = image_center - lane_center
+                    rospy.loginfo(f"turning Error: {error}")
+                    omega = self.KP * error  # Proportional control
+
+                    omega = max(min(omega, self.OMEGA_SPEED), -self.OMEGA_SPEED)
+                    
+                    # Publish control command
+                    cmd = Twist2DStamped(v=self.VELOCITY*0.8, omega=omega)
+                    self.pub_cmd.publish(cmd)
+                else:
+                    # Bound the angular velocity
+                    omega = max(min(omega, self.OMEGA_SPEED), -self.OMEGA_SPEED)
+                    
+                    # Publish control command
+                    cmd = Twist2DStamped(v=self.VELOCITY, omega=omega)
+                    self.pub_cmd.publish(cmd)
             else:
                 # If lanes not detected, go straight slowly
-                cmd = Twist2DStamped(v=self.VELOCITY/2, omega=0.0)
+                cmd = Twist2DStamped(v=self.VELOCITY/3, omega=self.OMEGA_SPEED)
                 self.pub_cmd.publish(cmd)
                 
             rate.sleep()
@@ -207,7 +228,7 @@ class DShapeNode(DTROS):
         sys.exit(0)
 
     def run(self):
-        rospy.sleep(0.5)
+        rospy.sleep(1)
         self.lane_follow()
         
 
