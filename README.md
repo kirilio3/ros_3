@@ -13,7 +13,6 @@ Understand camera intrinsic parameters and their role in image formation. We wil
 ## 1. Camera Distortion
 
 - **a.** Subscribe to the camera topic to get the distorted image.  
-  *(Hint: there is a ROS topic for the distorted image.)*
 - **b.** Use your camera intrinsic calibration parameters to manually convert (transform) the distorted image to become undistorted.  
 - **c.** Create a publisher for undistorted images.
 
