@@ -199,3 +199,4 @@ The table shows the python file to its corresponding sh files
 
 
 NOTE: There is a folder called images, containing the 3 screenshots of the blue, red and green lines. This needs to be used for proper hsv_values.py and image_contouring.py function. 
+More info can be find at: https://sites.google.com/ualberta.ca/lawrencechen412/exercises/exercise-3
