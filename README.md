@@ -176,23 +176,24 @@ Overall, the assignment provided valuable hands-on experience with ROS, computer
   ex: dts devel run -R csc22911 -L col-det
   this line will run the Color_Detection.py
 - each python file match to a sh file. plz use the following table to find the corresponding sh files. 
-  | python file     | sh file   |
-|:---------------|:--------------:|
-| Color_Detection.py | col-det,sh |
-| D_Shape_Node.py    | d-shape.sh |
-| Distorted_Camera.py    | camera-distorted.sh |
-| Resized_Blurred.py    | res-bl.sh |
-| blue_movement.py    | blue.sh |
-| green_movement.py    | red.sh |
-| red_movement.py    | green.sh |
-| detect.py    | detect.sh |
-| lane_detection.py    | lane-detection.sh |
-| led_control_node.py    | led-control.sh |
-| p_controller.py    | p.sh |
-| pd_controller.py    | pd-ctrl.sh |
-| pid_controller.py    | pid-ctrl.sh |
-| p_contr.py    | p-ctrl.sh |
-| pd_ctrl_follow.py    | pd-follow.sh |
-| pid_ctrl_follow.py    | pid-f.sh |
+| Python File             | SH File               |
+|-------------------------|-----------------------|
+| Color_Detection.py      | col-det.sh            |
+| D_Shape_Node.py         | d-shape.sh            |
+| Distorted_Camera.py     | camera-distorted.sh   |
+| Resized_Blurred.py      | res-bl.sh             |
+| blue_movement.py        | blue.sh               |
+| green_movement.py       | green.sh              |
+| red_movement.py         | red.sh                |
+| detect.py               | detect.sh             |
+| lane_detection.py       | lane-detection.sh     |
+| led_control_node.py     | led-control.sh        |
+| p_controller.py         | p.sh                  |
+| pd_controller.py        | pd-ctrl.sh            |
+| pid_controller.py       | pid-ctrl.sh           |
+| p_contr.py              | p-ctrl.sh             |
+| pd_ctrl_follow.py       | pd-follow.sh          |
+| pid_ctrl_follow.py      | pid-f.sh              |
+
 
 NOTE: 
