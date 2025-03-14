@@ -45,7 +45,6 @@ Understand camera intrinsic parameters and their role in image formation. We wil
 
 - **a.** Implement movement functions *(reuse functions from Exercise 2 if needed)*:
   - **i.** Move in a straight line for a specified distance.  
-    *(Hint: pass the distance as an argument to the function.)*
   - **ii.** Move in a curve through 90 degrees to the right.
   - **iii.** Move in a curve through 90 degrees to the left.
   - **iv.** Stop the bot for a specified duration.  
