@@ -175,7 +175,8 @@ Overall, the assignment provided valuable hands-on experience with ROS, computer
 - next run: dts devel run -R csc22911 -L < the_rogram_you_try_to_run >
   ex: dts devel run -R csc22911 -L col-det
   this line will run the Color_Detection.py
-- each python file match to a sh file. plz use the following table to find the corresponding sh files. 
+- each python file match to a sh file. plz use the following table to find the corresponding sh files.
+- 
 | Python File             | SH File               |
 |-------------------------|-----------------------|
 | Color_Detection.py      | col-det.sh            |
