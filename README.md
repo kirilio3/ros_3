@@ -184,12 +184,12 @@ dts devel build -f
 ## 2. Run the Code
 Next, run the desired program with:
 ```bash
-dts devel run -R csc22911 -L <the_program_you_want_to_run>
+dts devel run -R <duckiebot_name> -L <the_program_you_want_to_run>
 ```
 For example, to run Color_Detection.py, execute:
 
 ```bash
-dts devel run -R csc22911 -L col-det
+dts devel run -R <duckiebot_name> -L col-det
 ```
 This command will run the Color_Detection.py file.
 
