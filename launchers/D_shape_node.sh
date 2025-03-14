@@ -6,7 +6,7 @@ source /environment.sh
 dt-launchfile-init
 
 # launch subscriber
-rosrun my_package D_Shape_Node.py
+rosrun my_package D_shape_node.py
 
 # wait for app to end
 dt-launchfile-join
