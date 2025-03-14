@@ -192,6 +192,8 @@ For example, to run Color_Detection.py, execute:
 dts devel run -R csc22911 -L col-det
 ```
 This command will run the Color_Detection.py file.
+
+The table shows the python file to its corresponding sh files
 ---
   
 | Python File             | SH File               |
