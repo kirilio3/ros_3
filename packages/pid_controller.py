@@ -60,14 +60,14 @@ class DShapeNode(DTROS):
         self.WHEEL_CIRC = 2.0 * math.pi * self.WHEEL_RADIUS
         self.BASELINE = 0.077
         self.VELOCITY = 0.3
-        self.OMEGA_SPEED = 5
+        self.OMEGA_SPEED = 10
         self.angular_vel = 2.6
         
         # Control parameters
-        self.KP = 0.035  # Proportional gain
-        self.KI = 0.001  # Integral gain (new for PID controller)
+        self.KP = 0.0075  # Proportional gain
+        self.KI = 0.0001  # Integral gain (new for PID controller)
         self.KD = 0.01    # Derivative gain
-        self.TARGET_DISTANCE = 5  # meters
+        self.TARGET_DISTANCE = 1.3  # meters
         
         # Variables for PID terms
         self.prev_error = 0.0
@@ -178,19 +178,13 @@ class DShapeNode(DTROS):
                 break
                 
             # Get latest lane positions
-            try:
-                yellow_msg = rospy.wait_for_message(f"/{self.vehicle_name}/yellow_lane", Float64, timeout=1.0)
-                white_msg = rospy.wait_for_message(f"/{self.vehicle_name}/white_lane", Float64, timeout=1.0)
-            except rospy.ROSException as e:
-                rospy.logwarn(f"Failed to get lane messages: {e}")
-                yellow_msg = None
-                white_msg = None
+            yellow_msg = rospy.wait_for_message(f"/{self.vehicle_name}/yellow_lane", Float64, timeout=1.0)
+            white_msg = rospy.wait_for_message(f"/{self.vehicle_name}/white_lane", Float64, timeout=1.0)
             
             if yellow_msg is not None and white_msg is not None:
                 lane_center = (yellow_msg.data + white_msg.data) / 2
                 image_center = 320  # Assuming 640x480 image
-            
-
+                
                 # Calculate error
                 error = image_center - lane_center
                 
@@ -205,8 +199,7 @@ class DShapeNode(DTROS):
                 error_derivative = (error - self.prev_error) / dt if dt > 0 else 0.0
                 
                 # PID control signal
-                omega = (self.KP * error) + (self.KI * self.integral) -(self.KD * error_derivative)
-                rospy.loginfo(f"Error: {error}, intergeral: {self.integral}, derivative: {error_derivative}, omega: {omega}")
+                omega = (self.KP * error) + (self.KI * self.integral) + (self.KD * error_derivative)
                 
                 # Bound the angular velocity
                 omega = max(min(omega, self.OMEGA_SPEED), -self.OMEGA_SPEED)
@@ -220,7 +213,7 @@ class DShapeNode(DTROS):
                 self.prev_time = current_time
             else:
                 # If lanes not detected, go straight slowly
-                cmd = Twist2DStamped(v=self.VELOCITY/2, omega=self.OMEGA_SPEED/2)
+                cmd = Twist2DStamped(v=self.VELOCITY/2, omega=0.0)
                 self.pub_cmd.publish(cmd)
                 rospy.logwarn("Lanes not detected, moving straight slowly")
                 

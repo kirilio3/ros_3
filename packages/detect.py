@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import math
 import rospy
 from duckietown.dtros import DTROS, NodeType
 from sensor_msgs.msg import CompressedImage, CameraInfo
