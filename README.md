@@ -168,3 +168,31 @@ Throughout this assignment, we have gained comprehensive insights and practical 
 Overall, the assignment provided valuable hands-on experience with ROS, computer vision techniques using OpenCV, and controller tuning for autonomous systems. We learned how to handle camera distortions, detect lane markers reliably, and fine-tune different controllers to achieve robust autonomous navigation. These insights lay a strong foundation for further exploration in advanced robotics and autonomous driving applications.
 
 
+# HOW TO RUN THE CODE
+- first build the code by using following line:
+-   build: dts devel build -f
+---
+- next run: dts devel run -R csc22911 -L < the_rogram_you_try_to_run >
+  ex: dts devel run -R csc22911 -L col-det
+  this line will run the Color_Detection.py
+- each python file match to a sh file. plz use the following table to find the corresponding sh files. 
+  | python file     | sh file   |
+|:---------------|:--------------:|
+| Color_Detection.py | col-det,sh |
+| D_Shape_Node.py    | d-shape.sh |
+| Distorted_Camera.py    | camera-distorted.sh |
+| Resized_Blurred.py    | res-bl.sh |
+| blue_movement.py    | blue.sh |
+| green_movement.py    | red.sh |
+| red_movement.py    | green.sh |
+| detect.py    | detect.sh |
+| lane_detection.py    | lane-detection.sh |
+| led_control_node.py    | led-control.sh |
+| p_controller.py    | p.sh |
+| pd_controller.py    | pd-ctrl.sh |
+| pid_controller.py    | pid-ctrl.sh |
+| p_contr.py    | p-ctrl.sh |
+| pd_ctrl_follow.py    | pd-follow.sh |
+| pid_ctrl_follow.py    | pid-f.sh |
+
+NOTE: 
