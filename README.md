@@ -12,66 +12,66 @@ Understand camera intrinsic parameters and their role in image formation. We wil
 
 ## 1. Camera Distortion
 
-- **a.** Subscribe to the camera topic to get the distorted image.  
-- **b.** Use your camera intrinsic calibration parameters to manually convert (transform) the distorted image to become undistorted.  
-- **c.** Create a publisher for undistorted images.
+- **a.** Subscribed to the camera topic to get the distorted image.  
+- **b.** Used our camera intrinsic calibration parameters to manually convert (transform) the distorted image to become undistorted.  
+- **c.** Created a publisher for undistorted images.
+- ###Distorted_Camera.py
 
 ---
 
 ## 2. Image Pre-Processing
 
-- **a.** Resize the image.
-- **b.** Apply image smoothing (blurring) using OpenCV.
+- **a.** Resized the image.
+- **b.** Applied image smoothing (blurring) using OpenCV (both tasks are done in one file).
+- ###Resized_Blurred.py
 
 ---
 
 ## 3. Color Detection
 
-- **a.** Using the bot’s camera, save 3 images locally, where each image shows a blue, red, and green line.
-- **b.** From the saved images, determine the lower and upper HSV values for each lane color using appropriate methods.
-- **c.** Implement image contouring and color detection using OpenCV *(reference: GeeksForGeeks)*.
-- **d.** Draw a rectangle surrounding the detected lane.
-- **e.** Obtain lane dimensions with respect to the bot’s camera.
+- **a.** Used the bot’s camera to display the 3 lines, and screenshoted 3 images, where each image shows a blue, red, and green line. We do that in Colour_Detection.py
+- **b.** From the saved images, we determined the lower and upper HSV values for each lane color using appropriate methods. You can do that in file called hsv_values.py (without using a .sh). 
+- **c.** Implemented image contouring and color detection using OpenCV. Once again can be done without the '.sh' file and just ran from image_contouring.py
+- **d.** Draw a rectangle surrounding the detected lane. That's done in file called detect.py
+- **e.** Obtain lane dimensions with respect to the bot’s camera. That's done in file called detect.py as well.
 
 ---
 
 ## 4. LED Controller
 
-- **a.** Develop a function to control the robot’s front and back LEDs, allowing the desired color to be passed as a string or an RGB value.  
+- **a.** We re-used led-control code from lab 2. 
 
 ---
 
 ## 5. Autonomous Navigation Functions
 
-- **a.** Implement movement functions *(reuse functions from Exercise 2 if needed)*:
-  - **i.** Move in a straight line for a specified distance.  
-  - **ii.** Move in a curve through 90 degrees to the right.
-  - **iii.** Move in a curve through 90 degrees to the left.
-  - **iv.** Stop the bot for a specified duration.  
-- **b.** Combine LED control with the moving functions.
+- **a.** We re-used our shape following code from lab 2, however we commented out one of the turns in the run method. Should all be stored in D_Shape_Node.py
 
 ---
 
 ## 6. Lane-Based Behavioral Execution
 
-- **a.** Combine color and line detection, LED controller, and navigation functions to perform the following behaviors:
+- **a.** Combined color and line detection, LED controller, and navigation functions as requested:
   
   - **i. Blue Line:**
-    1. Start at least 30 cm away from the blue line.
-    2. Stop before the line for 3-5 seconds.
-    3. Signal using the right side (front & back) LED.
-    4. Move in a curve through 90 degrees to the right.
+    1. Started 30 cm away from the blue line.
+    2. Stoped before the line for 3 seconds.
+    3. Signaled orange using the right side (front & back) LED.
+    4. Moved in a curve through 90 degrees to the right.
+    5. blue_movement.py
   
   - **ii. Red Line:**
-    1. Start at least 30 cm away from the red line.
-    2. Stop before the line for 3-5 seconds.
-    3. Move straight for at least 30 cm.
+    1. Started 30 cm away from the red line.
+    2. Stoped before the line for 3 seconds.
+    3. Moved straight for about 30 cm.
+    4. red_movement.py
   
   - **iii. Green Line:**
-    1. Start at least 30 cm away from the green line.
-    2. Stop before the line for 3-5 seconds.
-    3. Signal using the left side (front & back) LED.
-    4. Move in a curve through 90 degrees to the left.
+    1. Started 30 cm away from the green line.
+    2. Stoped before the line for 3 seconds.
+    3. Signaled red using the left side (front & back) LED.
+    4. Moved in a curve through 90 degrees to the left.
+    5. green_movement.py
 
 
 ---
@@ -84,29 +84,24 @@ This section explores in depth different types of controllers that enable the bo
 
 ## 1. Lane Detection Functions
 
-- **a. Yellow Dotted Lane Detection:**  
-  Implement a function to detect the yellow dotted lane that separates inbound and outbound traffic.
-  
-- **b. White Solid Lane Detection:**  
-  Implement a function to detect the white solid lane (the outer lane).
-
-- **c. Publish Detection Results:**  
-  Publish the detection results for both the yellow and white lanes to a ROS topic.
+- **a. Yellow Dotted Lane and White Solid Lane Detection:**  
+  Implemented a function to detect the yellow dotted lane that separates inbound and outbound traffic, as well as a function to detect the white solid lane (the outer lane), all in one code. In that code we don't directly publish, however we do publish in all of the controller functions. 
+  lane_detection_node.py
 
 ---
 
 ## 2. Controller Implementation for Lane Following
 
-Implement functions for the following controllers to perform lane following along a straight path for at least 1.5 meters. Use the useful resources provided as guidance.
+Implemented functions for the following controllers to perform lane following along a straight path for at least 1.5 meters.
 
 - **a. Proportional (P) Controller:**  
-  Develop a P controller to drive the bot along the lane based on a proportional error signal.  
+  Developed a P controller to drive the bot along the lane based on a proportional error signal. Done in p_contr.py  
 
 - **b. Proportional-Derivative (PD) Controller:**  
-  Enhance the controller by adding a derivative term to dampen oscillations and improve response during lane following.
+  Enhanced the controller by adding a derivative term to dampen oscillations and improve response during lane following. Done in pd_controller.py  
 
 - **c. Proportional-Integral-Derivative (PID) Controller:**  
-  Further refine the controller by including an integral term to eliminate steady-state errors, combining all three components for robust lane following.
+  Further refined the controller by including an integral term to eliminate steady-state errors, combining all three components for robust lane following. Done in pid_controller.py  
 
 ---
 
@@ -116,40 +111,27 @@ This part integrates computer vision and controllers to perform a full lap lane 
 
 ---
 
-## 1. Lane Following Node
+## 1. Lane Following Node and Basic Proportinal Controller
 
-- **a. Create Lane Following Node:**  
-  Develop a ROS node that performs lane following.  
+- **a. Create Lane Following Node:**
+- We developed a ROS node and defined an error or target metric based on the lane position in p_controller.py
+---
 
-- **b. Error/Target Calculation:**  
-  Define an error or target metric based on the lane position. This error will be minimized by the controller to keep the bot on track.
+## 2. Proportional-Derivative (PD) Controller
+
+- **a. Implementation:**
+  We adjustsed the bot’s steering based on the calculated error from P and added the KD paramter to implement PD controller in pd_ctrl_follow.py
+  Enhanced the basic P controller by adding a derivative term to form a PD controller.
 
 ---
 
-## 2. Basic Proportional Controller
+## 3. Proportional-Integral-Derivative (PID) Controller
 
 - **a. Implementation:**  
-  Start with a basic Proportional (P) controller that adjusts the bot’s steering based on the calculated error.
+  Further extended the controller by adding an integral term to the PD controller to develop a full PID controller in pid_ctrl_follow.py.
 
 
 ---
-
-## 3. Proportional-Derivative (PD) Controller
-
-- **a. Implementation:**  
-  Enhance the basic P controller by adding a derivative term to form a PD controller.
-
----
-
-## 4. Proportional-Integral-Derivative (PID) Controller
-
-- **a. Implementation:**  
-  Further extend the controller by adding an integral term to the PD controller to develop a full PID controller.
-
-
----
-
-This section details the integration of computer vision with controller strategies to achieve robust and reliable autonomous lane following. Experiment with each controller type, analyze performance, and document your observations regarding responsiveness and error correction.
 
 # Conclusion
 
@@ -159,12 +141,12 @@ Throughout this assignment, we have gained comprehensive insights and practical 
   We explored the fundamentals of camera intrinsic parameters and image processing. By correcting camera distortion and implementing color detection, we learned how to extract meaningful information from visual data. This formed the basis for subsequent tasks where the bot relied on accurate image inputs for decision-making.
 
 - **Part Two - Autonomous Lane Following Controllers:**  
-  In this section, we developed functions to detect key lane markers (yellow dotted and white solid lanes) and published the detection results to ROS topics. We then implemented various controllers—Proportional (P), Proportional-Derivative (PD), and Proportional-Integral-Derivative (PID)—to perform lane following over a specified distance. This allowed us to analyze and compare the responsiveness and stability of each control strategy in real-world conditions.
+  In this section, we developed functions to detect key lane markers (yellow dotted and white solid lanes) and published the detection results to ROS topics. We then implemented various controllers—Proportional (P), Proportional-Derivative (PD), and Proportional-Integral-Derivative (PID)—to perform lane following over a specified distance. This allowed us to analyze and compare the responsiveness and stability of each control strategy in real-world conditions. We struggled a bit with implementing lane-detection and figuring out the center of the lane to make the cotnrollers work initially. 
 
 - **Part Three - Full Lap Lane Following Integration:**  
-  The final part combined computer vision and controller techniques into a single node to execute a complete lap of autonomous lane following. Starting with a basic P controller, we evaluated its performance under different error conditions, then incrementally enhanced it with derivative and integral terms. This step-by-step integration showcased how each controller component contributes to improved error correction, stability, and overall performance in a dynamic environment.
+  The final part combined computer vision and controller techniques into a single node to execute a complete lap of autonomous lane following. Starting with a basic P controller, we evaluated its performance under different error conditions, then incrementally enhanced it with derivative and integral terms. This step-by-step integration showcased how each controller component contributes to improved error correction, stability, and overall performance in a dynamic environment. We struggled a bit with tuning the parameters in PD and PID controllers for lane following. 
 
-Overall, the assignment provided valuable hands-on experience with ROS, computer vision techniques using OpenCV, and controller tuning for autonomous systems. We learned how to handle camera distortions, detect lane markers reliably, and fine-tune different controllers to achieve robust autonomous navigation. These insights lay a strong foundation for further exploration in advanced robotics and autonomous driving applications.
+Overall, the assignment provided valuable hands-on experience with ROS, computer vision techniques using OpenCV, and controller tuning for autonomous systems. We learned how to handle camera distortions, detect lane markers reliably, and fine-tune different controllers to achieve robust autonomous navigation.
 
 
 # HOW TO RUN THE CODE
@@ -184,12 +166,12 @@ dts devel build -f
 ## 2. Run the Code
 Next, run the desired program with:
 ```bash
-dts devel run -R <duckiebot_name> -L <the_program_you_want_to_run>
+dts devel run -R csc22911 -L <the_program_you_want_to_run>
 ```
 For example, to run Color_Detection.py, execute:
 
 ```bash
-dts devel run -R <duckiebot_name> -L col-det
+dts devel run -R csc22911 -L col-det
 ```
 This command will run the Color_Detection.py file.
 
@@ -216,4 +198,4 @@ The table shows the python file to its corresponding sh files
 | pid_ctrl_follow.py      | pid-f.sh              |
 
 
-NOTE: 
+NOTE: There is a folder called images, containing the 3 screenshots of the blue, red and green lines. This needs to be used for proper hsv_values.py and image_contouring.py function. 
